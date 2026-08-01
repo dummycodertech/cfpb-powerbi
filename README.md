@@ -1,4 +1,10 @@
-# CFPB Consumer Complaints Analytics Warehouse
+# CFPB Consumer Complaints — dbt + DuckDB Analytics Warehouse
+
+## Dashboard Preview
+![CFPB Consumer Complaints Dashboard](docs/dashboard_screenshot.png)
+
+> [📄 View full PDF](docs/dashboard.pdf) &nbsp;|&nbsp; **16.8M complaints · dbt + DuckDB + Power BI · Snapshot: 2026-08-01**
+
 
 A production-shaped analytics warehouse built on real CFPB (Consumer Financial Protection Bureau) consumer complaint data. Uses **dbt-core** for transformation and testing, **DuckDB** as the embedded local engine, and **Power BI Desktop** for the presentation layer.
 
