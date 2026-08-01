@@ -1,0 +1,48 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Raw CFPB Consumer Complaint Database loaded unmodified from the bulk CSV download.
+      All columns are VARCHAR; no casting or renaming has been applied at this layer.
+      Schema 'raw' is populated by scripts/02_ingest.py before dbt is invoked.
+    schema: raw
+    tables:
+      - name: raw_complaints
+        description: >
+          One row per consumer complaint submitted to the CFPB.
+          Source file: https://files.consumerfinance.gov/ccdb/complaints.csv.zip
+          Snapshot date is recorded in data/raw/snapshot_date.txt.
+        columns:
+          - name: Complaint ID
+            description: CFPB-assigned unique identifier for each complaint.
+          - name: Date received
+            description: Date the CFPB received the complaint (MM/DD/YYYY in raw CSV).
+          - name: Product
+            description: Financial product category associated with the complaint.
+          - name: Sub-product
+            description: Sub-category of the product.
+          - name: Issue
+            description: Issue the consumer identified in the complaint.
+          - name: Sub-issue
+            description: More specific issue detail.
+          - name: Consumer complaint narrative
+            description: Consumer-submitted text description (only when consent provided).
+          - name: Company public response
+            description: Optional public-facing response from the company.
+          - name: Company
+            description: Company that the complaint is about.
+          - name: State
+            description: Two-letter US state/territory code.
+          - name: ZIP code
+            description: Five-digit ZIP code of the consumer (first 3 digits only for privacy).
+          - name: Tags
+            description: Supplementary tags (e.g. Older American, Servicemember).
+          - name: Submitted via
+            description: Channel through which the complaint was submitted.
+          - name: Date sent to company
+            description: Date CFPB routed the complaint to the company (MM/DD/YYYY in raw CSV).
+          - name: Company response to consumer
+            description: How the company responded (e.g. Closed with explanation).
+          - name: Timely response?
+            description: Whether the company responded within the CFPB deadline (Yes/No).

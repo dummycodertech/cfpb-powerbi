@@ -1,0 +1,129 @@
+version: 2
+
+models:
+  - name: fact_complaints
+    description: >
+      Central fact table. Grain: one row per unique complaint_id.
+      days_to_company_routing is the CFPB routing lag (receipt to company forwarding),
+      NOT resolution time — the dataset does not publish an actual resolution date.
+    columns:
+      - name: complaint_id
+        description: Unique complaint identifier (PK).
+        tests:
+          - not_null
+          - unique
+
+      - name: date_received_key
+        description: FK to dim_date.date_key.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+
+      - name: company_id
+        description: FK to dim_company.company_id.
+        tests:
+          - relationships:
+              to: ref('dim_company')
+              field: company_id
+
+      - name: product_id
+        description: FK to dim_product.product_id.
+        tests:
+          - relationships:
+              to: ref('dim_product')
+              field: product_id
+
+      - name: state_code
+        description: FK to dim_state.state_code (2-letter natural key).
+        tests:
+          - relationships:
+              to: ref('dim_state')
+              field: state_code
+              config:
+                severity: warn  # Some complaints have blank/invalid state codes
+
+      - name: days_to_company_routing
+        description: >
+          Days from CFPB receipt to routing to company. CFPB routing lag only —
+          not resolution time (CFPB does not publish a resolution date).
+          NULL for missing or impossible dates.
+
+      - name: timely_response_flag
+        description: Boolean — company responded within the CFPB deadline.
+
+  - name: dim_company
+    description: One row per distinct company. No pre-aggregated measures.
+    columns:
+      - name: company_id
+        description: Surrogate key (ROW_NUMBER).
+        tests:
+          - not_null
+          - unique
+      - name: company_name
+        description: Company name as-is from the complaints.
+        tests:
+          - not_null
+
+  - name: dim_product
+    description: One row per (product_standardized, sub_product) combination.
+    columns:
+      - name: product_id
+        description: Surrogate key.
+        tests:
+          - not_null
+          - unique
+      - name: product_name
+        description: Standardized product category (cross-year consistent).
+        tests:
+          - not_null
+
+  - name: dim_state
+    description: US states and territories with Census region classification.
+    columns:
+      - name: state_code
+        description: Two-letter state/territory code (PK).
+        tests:
+          - not_null
+          - unique
+      - name: state_name
+        description: Full state name.
+        tests:
+          - not_null
+      - name: region
+        description: US Census region (Northeast, Midwest, South, West, Other).
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - Northeast
+                - Midwest
+                - South
+                - West
+                - Other
+
+  - name: dim_date
+    description: Date dimension generated from DuckDB RANGE(). Covers 2011-2026.
+    columns:
+      - name: date_key
+        description: Date (PK).
+        tests:
+          - not_null
+          - unique
+      - name: year_number
+        description: Calendar year.
+        tests:
+          - not_null
+      - name: month_number
+        description: Month number (1-12).
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1,2,3,4,5,6,7,8,9,10,11,12]
+      - name: quarter_number
+        description: Calendar quarter (1-4).
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1,2,3,4]

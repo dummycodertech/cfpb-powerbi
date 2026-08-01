@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Data — raw CSVs and the DuckDB file are large and local-only
+data/raw/
+data/exports/
+*.duckdb
+*.duckdb.wal
+
+# dbt build artifacts
+target/
+dbt_packages/
+logs/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db

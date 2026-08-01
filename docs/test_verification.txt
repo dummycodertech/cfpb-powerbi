@@ -1,0 +1,48 @@
+======================================================================
+DATA QUALITY VERIFICATION — dbt unique test injection
+Run timestamp: 2026-08-01 12:25:53 UTC
+======================================================================
+
+[1] Injecting duplicate: Complaint ID = '8485587'
+   Table now has 16,849,715 rows; Complaint ID '8485587' appears 2x
+
+[2] Running: dbt build --select stg_complaints  (expect unique test FAILURE)
+   Return code: 1  (FAILED as expected [OK])
+   Relevant output lines:
+     12:25:59  7 of 7 START test unique_stg_complaints_complaint_id ........................... [RUN]
+     12:26:00  7 of 7 FAIL 1 unique_stg_complaints_complaint_id ............................... [FAIL 1 in 1.38s]
+     12:26:00  [ERROR]: in test unique_stg_complaints_complaint_id (models\staging\schema.yml)
+     12:26:00    compiled code at target\compiled\cfpb_complaints\models\staging\schema.yml\unique_stg_complaints_complaint_id.sql
+
+[3] Removing injected duplicate for Complaint ID = '8485587'
+   After removal: 16,849,714 rows; Complaint ID '8485587' appears 1x (should be 1)
+
+[4] Running: dbt build  (full pipeline — expect clean PASS)
+   Return code: 0  (PASSED clean [OK])
+   12:26:28  32 of 43 PASS unique_dim_company_company_id .................................... [PASS in 0.14s]
+   12:26:31  34 of 43 PASS not_null_dim_product_product_name ................................ [PASS in 0.05s]
+   12:26:31  35 of 43 PASS unique_dim_product_product_id .................................... [PASS in 0.06s]
+   12:26:31  33 of 43 PASS not_null_dim_product_product_id .................................. [PASS in 0.06s]
+   12:27:08  38 of 43 PASS not_null_fact_complaints_date_received_key ....................... [PASS in 0.10s]
+   12:27:09  37 of 43 PASS not_null_fact_complaints_complaint_id ............................ [PASS in 0.14s]
+   12:27:09  39 of 43 PASS relationships_fact_complaints_company_id__company_id__ref_dim_company_  [PASS in 0.22s]
+   12:27:09  40 of 43 PASS relationships_fact_complaints_date_received_key__date_key__ref_dim_date_  [PASS in 0.23s]
+   12:27:09  41 of 43 PASS relationships_fact_complaints_product_id__product_id__ref_dim_product_  [PASS in 0.20s]
+   12:27:09  42 of 43 WARN 2027 relationships_fact_complaints_state_code__state_code__ref_dim_state_  [WARN 2027 in 0.72s]
+   12:27:10  43 of 43 PASS unique_fact_complaints_complaint_id .............................. [PASS in 1.19s]
+   12:27:10  Completed with 1 warning:
+   12:27:10  [WARNING]: in test relationships_fact_complaints_state_code__state_code__ref_dim_state_ (models\marts\schema.yml)
+   12:27:10  [WARNING]: Got 2027 results, configured to warn if != 0
+   12:27:10  Done. PASS=42 WARN=1 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=43
+
+======================================================================
+VERIFICATION SUMMARY
+======================================================================
+[OK] Step 1: Injected a duplicate complaint_id into raw.raw_complaints
+[OK] Step 2: dbt build on stg_complaints FAILED -- unique test detected the duplicate
+[OK] Step 3: Removed the injected duplicate row
+[OK] Step 4: Full dbt build PASSED clean after removal
+
+Conclusion: The dbt unique test on stg_complaints.complaint_id
+correctly catches duplicate primary keys at the staging layer,
+before any data propagates to the mart layer.

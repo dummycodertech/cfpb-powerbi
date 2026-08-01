@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: stg_complaints
+    description: >
+      1:1 with raw.raw_complaints. Columns renamed to snake_case, dates cast to DATE,
+      complaint_id cast to BIGINT. No business logic applied at this layer.
+    columns:
+      - name: complaint_id
+        description: CFPB-assigned unique complaint identifier (BIGINT).
+        tests:
+          - not_null
+          - unique
+
+      - name: date_received
+        description: Date the CFPB received the complaint.
+        tests:
+          - not_null
+
+      - name: date_sent_to_company
+        description: Date CFPB routed the complaint to the company.
+
+      - name: product
+        description: Financial product category (raw label, standardized in intermediate layer).
+
+      - name: sub_product
+        description: Sub-category of the product.
+
+      - name: issue
+        description: Consumer-identified issue.
+
+      - name: sub_issue
+        description: More granular issue detail.
+
+      - name: company
+        description: Company the complaint is about.
+
+      - name: state
+        description: Two-letter US state/territory code.
+
+      - name: zip_code
+        description: Consumer ZIP code (first 3 digits for privacy).
+
+      - name: tags
+        description: Supplementary tags (e.g. Older American, Servicemember).
+
+      - name: submitted_via
+        description: Submission channel.
+        tests:
+          - accepted_values:
+              values:
+                - Web
+                - Phone
+                - Referral
+                - Postal mail
+                - Fax
+                - Email
+              config:
+                severity: warn
+
+      - name: company_response
+        description: How the company resolved the complaint.
+
+      - name: company_public_response
+        description: Optional public-facing company statement.
+
+      - name: timely_response
+        description: Whether the company responded within the CFPB deadline.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+          - accepted_values:
+              values:
+                - "Yes"
+                - "No"
+
+      - name: consumer_narrative
+        description: Full text of consumer complaint (NULL when consent not provided).

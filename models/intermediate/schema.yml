@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: int_complaints_cleaned
+    description: >
+      Deduplicated and product-standardized complaints. Product labels are normalized
+      across CFPB filing-year categories. days_to_company_routing is the routing lag
+      (receipt to company forwarding) — not resolution time, which CFPB does not publish.
+    columns:
+      - name: complaint_id
+        description: Unique complaint identifier (deduped).
+        tests:
+          - not_null
+          - unique
+
+      - name: date_received
+        description: Date complaint received by CFPB.
+        tests:
+          - not_null
+
+      - name: product_standardized
+        description: Normalized product category (cross-year consistent).
+        tests:
+          - not_null
+
+      - name: timely_response_flag
+        description: Boolean — company responded within CFPB deadline.
+
+      - name: days_to_company_routing
+        description: >
+          Days from CFPB receipt to routing to company. CFPB routing lag, NOT resolution time.
+          NULL for missing/invalid dates; negative values are excluded.

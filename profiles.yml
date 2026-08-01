@@ -1,0 +1,13 @@
+# profiles.yml — committed deliberately for one-command reproducibility on this local-only project.
+# Standard practice for team/production repos is to keep profiles.yml out of version control
+# (it typically holds credentials). There are no secrets here — just a local DuckDB file path —
+# but any dbt reviewer will notice; this comment is the preemptive explanation.
+
+cfpb_complaints:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "data/cfpb_complaints.duckdb"
+      threads: 4
+      schema: main
