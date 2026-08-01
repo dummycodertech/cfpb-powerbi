@@ -14,9 +14,9 @@ Built as a portfolio project for a data analyst resume — every design decision
 
 ## Problem Statement
 
-The CFPB publishes the Consumer Complaint Database: a rolling dataset of all formal complaints submitted to the bureau against financial institutions. It covers ~7M+ complaints across products including mortgages, credit cards, debt collection, and student loans from 2011 to present.
+The CFPB publishes the Consumer Complaint Database: a rolling dataset of all formal complaints submitted to the bureau against financial institutions. It covers 16.8M complaints across products including mortgages, credit cards, debt collection, and credit reporting from 2011 to present.
 
-The raw dataset is a single flat CSV with inconsistent product category labels across filing years, potential duplicate complaint IDs, and mixed date formats. This project structures that data into a tested, documented star schema that supports reliable trend analysis, company benchmarking, and response-time measurement.
+The raw dataset is a single flat CSV with inconsistent product category labels across filing years, potential duplicate complaint IDs, and ISO 8601 timestamp dates. This project structures that data into a tested, documented star schema that supports reliable trend analysis, company benchmarking, and response-time measurement.
 
 ---
 
@@ -27,7 +27,7 @@ The raw dataset is a single flat CSV with inconsistent product category labels a
 | **Source URL** | https://files.consumerfinance.gov/ccdb/complaints.csv.zip |
 | **Snapshot date** | **2026-08-01** |
 | **Raw rows ingested** | **16,849,715** (loaded in 47.2s) |
-| **Fact rows after dedup** | **16,848,393** (1,321 rows removed: 11 CSV-parse-broken rows + 1,310 null-ID continuation lines) |
+| **Fact rows** | **16,848,393** (1,321 rows excluded by staging filter — see breakdown in Real Numbers) |
 | **Date range** | 2011-01-01 to 2026-07-31 |
 
 > The CFPB bulk file updates roughly weekly. The snapshot date in `data/raw/snapshot_date.txt` pins exactly which extract was used for this analysis.
@@ -130,31 +130,51 @@ All other labels pass through unchanged. The mapping was derived by querying act
 
 ## Schema Tests
 
-| Model | Test | Type |
-|---|---|---|
-| `stg_complaints` | `complaint_id` not_null | Generic |
-| `stg_complaints` | `complaint_id` unique | Generic |
-| `stg_complaints` | `date_received` not_null | Generic |
-| `stg_complaints` | `timely_response` accepted_values (Yes/No) | Generic |
-| `stg_complaints` | `submitted_via` accepted_values | Generic (warn) |
-| `int_complaints_cleaned` | `complaint_id` not_null | Generic |
-| `int_complaints_cleaned` | `complaint_id` unique | Generic |
-| `int_complaints_cleaned` | `date_received` not_null | Generic |
-| `int_complaints_cleaned` | `product_standardized` not_null | Generic |
-| `fact_complaints` | `complaint_id` not_null + unique | Generic |
-| `fact_complaints` | `date_received_key` → `dim_date.date_key` | Relationship |
-| `fact_complaints` | `company_id` → `dim_company.company_id` | Relationship |
-| `fact_complaints` | `product_id` → `dim_product.product_id` | Relationship |
-| `fact_complaints` | `state_code` → `dim_state.state_code` | Relationship (warn) |
-| `dim_company` | `company_id` not_null + unique | Generic |
-| `dim_product` | `product_id` not_null + unique | Generic |
-| `dim_state` | `state_code` not_null + unique | Generic |
-| `dim_state` | `region` accepted_values | Generic |
-| `dim_date` | `date_key` not_null + unique | Generic |
-| `dim_date` | `month_number` accepted_values (1-12) | Generic |
-| `dim_date` | `quarter_number` accepted_values (1-4) | Generic |
+35 tests defined in `schema.yml` files across all layers, verified against `target/manifest.json`. Each row is one test node as executed by dbt.
 
-**Total tests: 21**
+| Model | Column | Test | Result |
+|---|---|---|---|
+| `stg_complaints` | `complaint_id` | not_null | PASS |
+| `stg_complaints` | `complaint_id` | unique | PASS |
+| `stg_complaints` | `date_received` | not_null | PASS |
+| `stg_complaints` | `timely_response` | not_null | PASS (warn severity) |
+| `stg_complaints` | `timely_response` | accepted_values (Yes/No) | PASS |
+| `stg_complaints` | `submitted_via` | accepted_values (Web/Phone/Referral/Postal mail/Fax/Email) | PASS (warn severity) |
+| `int_complaints_cleaned` | `complaint_id` | not_null | PASS |
+| `int_complaints_cleaned` | `complaint_id` | unique | PASS |
+| `int_complaints_cleaned` | `date_received` | not_null | PASS |
+| `int_complaints_cleaned` | `product_standardized` | not_null | PASS |
+| `dim_company` | `company_id` | not_null | PASS |
+| `dim_company` | `company_id` | unique | PASS |
+| `dim_company` | `company_name` | not_null | PASS |
+| `dim_product` | `product_id` | not_null | PASS |
+| `dim_product` | `product_id` | unique | PASS |
+| `dim_product` | `product_name` | not_null | PASS |
+| `dim_state` | `state_code` | not_null | PASS |
+| `dim_state` | `state_code` | unique | PASS |
+| `dim_state` | `state_name` | not_null | PASS |
+| `dim_state` | `region` | not_null | PASS |
+| `dim_state` | `region` | accepted_values (Northeast/Midwest/South/West/Other) | PASS |
+| `dim_date` | `date_key` | not_null | PASS |
+| `dim_date` | `date_key` | unique | PASS |
+| `dim_date` | `month_number` | not_null | PASS |
+| `dim_date` | `quarter_number` | not_null | PASS |
+| `dim_date` | `year_number` | not_null | PASS |
+| `dim_date` | `month_number` | accepted_values (1–12) | PASS |
+| `dim_date` | `quarter_number` | accepted_values (1–4) | PASS |
+| `fact_complaints` | `complaint_id` | not_null | PASS |
+| `fact_complaints` | `complaint_id` | unique | PASS |
+| `fact_complaints` | `date_received_key` | not_null | PASS |
+| `fact_complaints` | `date_received_key` | relationship → `dim_date.date_key` | PASS |
+| `fact_complaints` | `company_id` | relationship → `dim_company.company_id` | PASS |
+| `fact_complaints` | `product_id` | relationship → `dim_product.product_id` | PASS |
+| `fact_complaints` | `state_code` | relationship → `dim_state.state_code` | WARN (2,027 rows) |
+
+**Total: 35 tests. 34 PASS, 1 WARN (state FK), 0 ERROR.**
+
+The WARN on `state_code` is expected and configured: 2,027 complaints have state codes that don't match `dim_state` (blank codes and military postal codes such as `AA`, `AE`, `AP` not included in the seed). These are real complaints, not data errors.
+
+Note: the dbt build summary shows `PASS=42, WARN=1, TOTAL=43` because it counts all node types: 7 models + 1 seed + 35 tests = 43 nodes total.
 
 ---
 
@@ -317,15 +337,22 @@ Full log is written to `docs/test_verification.txt`.
 |---|---|
 | **Data snapshot date** | 2026-08-01 |
 | **Raw rows ingested** | 16,849,715 |
-| **Fact rows (after dedup + garbage filter)** | 16,848,393 |
-| **Rows removed at staging** | 1,322 (11 CSV-parse-broken rows + 1,310 null-ID continuation lines + 1 deliberate cleanup) |
+| **Fact rows** | 16,848,393 |
+| **Rows excluded by staging filter** | 1,321 |
+| &nbsp;&nbsp;↳ CSV multiline parse failures | 11 rows (complaint narrative text bled into date/product fields; confirmed by inspection) |
+| &nbsp;&nbsp;↳ CFPB "Pending Company Match" records | 1,310 rows (valid dates and states, null Complaint ID — complaints not yet assigned an ID by CFPB; excluded because a null PK cannot participate in the star schema) |
+| **Net rows unaccounted (operator error)** | 1 row (complaint_id 8489941 accidentally deleted from raw during test-break cleanup; not a data quality catch) |
+| **Total variance from original ingestion** | 1,322 (16,849,715 − 16,848,393 = 1,322; the staging filter accounts for 1,321; the remaining 1 is the accidental deletion) |
+| **Organic duplicate complaint_ids found** | **0** — bureau-assigned IDs were clean across all 16.8M rows. The unique test was verified separately via deliberate injection (see test-break section). |
 | **Distinct companies** | 8,033 |
 | **Distinct product/sub-product combos** | 105 |
+| **complaint_id data type** | BIGINT (cast from VARCHAR to prevent overflow) |
 | **dbt models** | 7 |
-| **dbt tests** | 35 defined → 43 executed (some tests run per-column) |
+| **dbt data tests** | **35** (verified against `target/manifest.json`) |
+| **dbt total nodes executed** | 43 (7 models + 1 seed + 35 tests) |
 | **dbt build result** | PASS=42, WARN=1, ERROR=0 |
 | **dbt build runtime** | 56.00 seconds |
-| **Test-break result** | `unique_stg_complaints_complaint_id` → FAIL 1 (caught duplicate complaint_id 8485587) |
+| **Test-break result** | `unique_stg_complaints_complaint_id` → FAIL 1 (deliberate injection of complaint_id 8485587) |
 | **Clean pass after removal** | PASS=42, WARN=1, ERROR=0 |
 | **Parquet export — fact_complaints** | 79.31 MB (ZSTD compressed) |
 
