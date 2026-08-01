@@ -153,6 +153,11 @@ story.append(P(
     "no ID. They are not bad data. They're excluded from fact_complaints for a structural reason, "
     "not a quality reason: the fact table's grain is \u201cone row per complaint_id,\u201d and a "
     "table can't enforce uniqueness or support reliable joins on a key that's null.", "Body"))
+story.append(P(
+    "<i>Analogy for a beginner:</i> Think of a primary key like a tracking number on a package. "
+    "If you have a box (the complaint) but FedEx hasn't printed the label yet (the null ID), you "
+    "can't put it on the delivery truck (the fact table) because the system won't know how to track "
+    "it. The box isn't broken, it's just not ready to ship.", "BodyItalic"))
 
 story.append(P("Why this distinction matters for an interview", "H2"))
 story.append(P(
@@ -304,6 +309,11 @@ story.append(P(
     "intermediate, and marts isn't a dbt requirement, it's a convention that keeps each layer doing "
     "one job: staging cleans structure, intermediate applies business logic, marts is what gets "
     "queried.", "Body"))
+story.append(P(
+    "<i>Analogy for a beginner:</i> Imagine SQL without dbt is like cooking a 5-course meal by "
+    "memorizing every recipe and doing it all from scratch every time. dbt is like a smart recipe "
+    "manager that says \u201cchop the onions first, because the sauce needs them, and the pasta "
+    "needs the sauce.\u201d It figures out the correct order to run everything.", "BodyItalic"))
 
 story.append(P("Star schema, grain, fact vs. dimension", "H2"))
 story.append(P(
@@ -312,6 +322,12 @@ story.append(P(
     "complaint_id. Dimension tables hold descriptive context (company name, product name, state, "
     "date attributes) that the fact table references by key, as shown in the worked example above.",
     "Body"))
+story.append(P(
+    "<i>Analogy for a beginner:</i> A <b>Fact table</b> is like the printed receipt from a grocery "
+    "store. It shows the transaction: time, barcode, quantity, total price. A <b>Dimension table</b> "
+    "is the store's central product catalog. The receipt doesn't print the manufacturer's address "
+    "and full nutritional info on every line; it just prints a barcode (the key). If you want those "
+    "details, you look up the barcode in the catalog (the dimension).", "BodyItalic"))
 
 story.append(P("Why DuckDB", "H2"))
 story.append(P(
@@ -320,6 +336,14 @@ story.append(P(
     "which is exactly the access pattern analytical aggregation needs. Row-oriented engines like "
     "Postgres or SQLite are built for OLTP workloads (many small reads and writes of individual "
     "rows), not for scanning and aggregating millions of rows at once.", "Body"))
+story.append(P(
+    "<i>Analogy for a beginner:</i> A row-oriented database (like Postgres) stores data like a "
+    "phone book. If you want to find John Smith's number, you read his whole row: name, address, "
+    "phone. But if you want to find the average age of <i>everyone</i> in the book, you still have "
+    "to read every name and address just to get to the ages. A columnar database (like DuckDB) "
+    "stores all the ages together in one list, all the names in another. When you ask for the "
+    "average age, it ignores the names and addresses entirely and just zips down the age list. "
+    "That's why it's infinitely faster for analytics.", "BodyItalic"))
 
 story.append(P("Materialization: why views here, tables there", "H2"))
 story.append(P(
@@ -347,6 +371,11 @@ story.append(P(
     "dbt build; <b>warn</b> severity logs the failure but lets the build succeed. This project uses "
     "warn where the \u201cviolation\u201d is real, legitimate data &mdash; military postal codes "
     "(AA/AE/AP) not in the state seed, for example &mdash; rather than an actual defect.", "Body"))
+story.append(P(
+    "<i>Analogy for a beginner:</i> An <b>Error</b> is a red traffic light. The data is fundamentally "
+    "broken (like a missing primary key) and the pipeline must stop. A <b>Warn</b> is a yellow "
+    "light. The data looks unusual (like a ZIP code from a military base abroad) so the system logs "
+    "it to tell you to be careful, but lets the pipeline keep running.", "BodyItalic"))
 
 # ------------------------------------------------------ 7. Design decisions ---
 story.append(PageBreak())
