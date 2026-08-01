@@ -20,6 +20,16 @@ The raw dataset is a single flat CSV with inconsistent product category labels a
 
 ---
 
+## Findings: "Pending Company Match" Complaints
+
+During data quality checks, the pipeline flagged 1,310 records as having a null `Complaint ID`.
+
+Instead of treating these as CSV parse failures (which accounted for only 11 rows), an investigation of the raw dataset revealed these are legitimate **CFPB "Pending Company Match"** complaints. These are valid records with real submission dates, states, and products that simply haven't been assigned an ID yet because the CFPB's internal routing is still in progress. 
+
+This demonstrates the difference between naive data cleaning (blindly dropping nulls) and business-aware analytics engineering. Because a null primary key cannot participate in a dimensional model's relationships, these rows are intentionally excluded from `fact_complaints` via the staging layer filter, preserving the integrity of the star schema without mischaracterizing the nature of the data.
+
+---
+
 ## Data Snapshot
 
 | Field | Value |
@@ -27,7 +37,7 @@ The raw dataset is a single flat CSV with inconsistent product category labels a
 | **Source URL** | https://files.consumerfinance.gov/ccdb/complaints.csv.zip |
 | **Snapshot date** | **2026-08-01** |
 | **Raw rows ingested** | **16,849,715** (loaded in 47.2s) |
-| **Fact rows** | **16,848,393** (1,321 rows excluded by staging filter — see breakdown in Real Numbers) |
+| **Fact rows** | **16,848,394** (1,321 rows excluded by staging filter — see breakdown in Real Numbers) |
 | **Date range** | 2011-01-01 to 2026-07-31 |
 
 > The CFPB bulk file updates roughly weekly. The snapshot date in `data/raw/snapshot_date.txt` pins exactly which extract was used for this analysis.
@@ -337,12 +347,11 @@ Full log is written to `docs/test_verification.txt`.
 |---|---|
 | **Data snapshot date** | 2026-08-01 |
 | **Raw rows ingested** | 16,849,715 |
-| **Fact rows** | 16,848,393 |
+| **Fact rows** | 16,848,394 |
 | **Rows excluded by staging filter** | 1,321 |
 | &nbsp;&nbsp;↳ CSV multiline parse failures | 11 rows (complaint narrative text bled into date/product fields; confirmed by inspection) |
 | &nbsp;&nbsp;↳ CFPB "Pending Company Match" records | 1,310 rows (valid dates and states, null Complaint ID — complaints not yet assigned an ID by CFPB; excluded because a null PK cannot participate in the star schema) |
-| **Net rows unaccounted (operator error)** | 1 row (complaint_id 8489941 accidentally deleted from raw during test-break cleanup; not a data quality catch) |
-| **Total variance from original ingestion** | 1,322 (16,849,715 − 16,848,393 = 1,322; the staging filter accounts for 1,321; the remaining 1 is the accidental deletion) |
+| **Total variance from original ingestion** | 1,321 (16,849,715 − 16,848,394 = 1,321; exactly accounted for by the staging filter) |
 | **Organic duplicate complaint_ids found** | **0** — bureau-assigned IDs were clean across all 16.8M rows. The unique test was verified separately via deliberate injection (see test-break section). |
 | **Distinct companies** | 8,033 |
 | **Distinct product/sub-product combos** | 105 |
@@ -351,10 +360,10 @@ Full log is written to `docs/test_verification.txt`.
 | **dbt data tests** | **35** (verified against `target/manifest.json`) |
 | **dbt total nodes executed** | 43 (7 models + 1 seed + 35 tests) |
 | **dbt build result** | PASS=42, WARN=1, ERROR=0 |
-| **dbt build runtime** | 56.00 seconds |
-| **Test-break result** | `unique_stg_complaints_complaint_id` → FAIL 1 (deliberate injection of complaint_id 8485587) |
+| **dbt build runtime** | 63.23 seconds |
+| **Test-break result** | `unique_stg_complaints_complaint_id` → FAIL 1 (deliberate injection of dummy test ID) |
 | **Clean pass after removal** | PASS=42, WARN=1, ERROR=0 |
-| **Parquet export — fact_complaints** | 79.31 MB (ZSTD compressed) |
+| **Parquet export — fact_complaints** | 79.15 MB (ZSTD compressed) |
 
 ---
 

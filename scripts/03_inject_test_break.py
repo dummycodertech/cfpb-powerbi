@@ -76,19 +76,21 @@ def main():
     log(f"Run timestamp: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}")
     log("=" * 70)
 
-    # ── Step 1: Find a complaint_id to duplicate ──────────────────────────
+    # ── Step 1: Inject dummy duplicate rows ─────────────────────────────────
     con = duckdb.connect(str(DB_PATH))
-    target_id = get_first_complaint_id(con)
+    target_id = INJECTION_MARKER
     log(f"\n[1] Injecting duplicate: Complaint ID = {target_id!r}")
 
-    # Insert an exact copy of that row into raw.raw_complaints
-    con.execute(f"""
-        INSERT INTO raw.raw_complaints
-        SELECT *
-        FROM raw.raw_complaints
-        WHERE "Complaint ID" = '{target_id}'
-        LIMIT 1
-    """)
+    # Insert TWO copies of a row using a fake Complaint ID to guarantee it doesn't touch real data
+    for _ in range(2):
+        con.execute(f"""
+            INSERT INTO raw.raw_complaints
+            SELECT * REPLACE ('{target_id}' AS "Complaint ID")
+            FROM raw.raw_complaints
+            WHERE "Complaint ID" IS NOT NULL
+            LIMIT 1
+        """)
+
     total_before = con.execute("SELECT COUNT(*) FROM raw.raw_complaints").fetchone()[0]
     dup_count = con.execute(
         f"SELECT COUNT(*) FROM raw.raw_complaints WHERE \"Complaint ID\" = '{target_id}'"
@@ -119,26 +121,19 @@ def main():
     log(f"\n[3] Removing injected duplicate for Complaint ID = {target_id!r}")
     con = duckdb.connect(str(DB_PATH))
 
-    # DuckDB doesn't support DELETE with LIMIT directly, so use ROWID approach
-    # We'll use a CTE with ROW_NUMBER to identify and delete just one copy
+    # Safely delete ONLY the injected fake ID
     con.execute(f"""
         DELETE FROM raw.raw_complaints
-        WHERE rowid IN (
-            SELECT rowid
-            FROM raw.raw_complaints
-            WHERE "Complaint ID" = '{target_id}'
-            ORDER BY rowid DESC
-            LIMIT 1
-        )
+        WHERE "Complaint ID" = '{target_id}'
     """)
     post_count = con.execute(
         f"SELECT COUNT(*) FROM raw.raw_complaints WHERE \"Complaint ID\" = '{target_id}'"
     ).fetchone()[0]
     total_after = con.execute("SELECT COUNT(*) FROM raw.raw_complaints").fetchone()[0]
-    log(f"   After removal: {total_after:,} rows; Complaint ID {target_id!r} appears {post_count}x (should be 1)")
+    log(f"   After removal: {total_after:,} rows; Complaint ID {target_id!r} appears {post_count}x (should be 0)")
     con.close()
 
-    assert post_count == 1, f"Expected 1 row for {target_id} after removal, got {post_count}"
+    assert post_count == 0, f"Expected 0 rows for {target_id} after removal, got {post_count}"
 
     # ── Step 4: Full dbt build — expect PASS ──────────────────────────────
     log("\n[4] Running: dbt build  (full pipeline — expect clean PASS)")
