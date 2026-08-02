@@ -142,6 +142,10 @@ This demonstrates the difference between naive data cleaning (blindly dropping n
 | **Total variance from original ingestion** | 1,321 (16,849,715 − 16,848,394 = 1,321; exactly accounted for by the staging filter) |
 | **Organic duplicate complaint_ids found** | **0** — bureau-assigned IDs were clean across all 16.8M rows. The unique test was verified separately via deliberate injection (see test-break section). |
 
+### 🐛 The Bug We Found (and Fixed)
+
+The original test-break script duplicated a real, existing `complaint_id` to trigger the unique test, then deleted the duplicate during cleanup — but the cleanup logic wasn't scoped precisely enough and also deleted the original real row sharing that ID, permanently losing one legitimate record from raw. Root cause: two rows shared an ID that nothing could safely distinguish between. Fix: the script now injects rows using a fabricated sentinel `complaint_id` (`__INJECTED_DUPLICATE__`) guaranteed not to collide with any real CFPB ID, so cleanup deletes exactly the injected rows with zero ambiguity. Caught by a reconciliation check — the raw row count after rebuilding didn't match the original ingestion count.
+
 ### Test-Break Exercise
 
 This section documents a deliberate test-break exercise that proves the dbt unique test catches real data problems.
@@ -150,7 +154,7 @@ This section documents a deliberate test-break exercise that proves the dbt uniq
 The `unique` test on `stg_complaints.complaint_id`. This test asserts that every complaint ID in the staging layer appears exactly once.
 
 **How the test was run**
-1. **Inject**: A duplicate of an existing `complaint_id` was inserted into `raw.raw_complaints` using `scripts/03_inject_test_break.py`.
+1. **Inject**: Two rows sharing a single fabricated sentinel `complaint_id` (`__INJECTED_DUPLICATE__`) — guaranteed not to collide with any real CFPB ID — were inserted into `raw.raw_complaints` using `scripts/03_inject_test_break.py`.
 2. **Expected failure**: `dbt build --select stg_complaints` was run. The `unique` test on `complaint_id` **failed**, producing output including `FAIL 1 not_null_stg_complaints_... [FAIL 1]` *(Exact output recorded in `docs/test_verification.txt`)*
 3. **Cleanup**: The injected duplicate was removed.
 4. **Clean pass**: `dbt build` was run again and **all tests passed**.
