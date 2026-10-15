@@ -749,16 +749,16 @@ cfpb-powerbi/
 ```mermaid
 gantt
     title Analytics Engineering Roadmap
-    dateFormat  YYYY-MM
+    dateFormat  YYYY-MM-DD
     section Quality & CI/CD
-    GitHub Actions CI with duckdb-wasm test runs :active, 2026-10, 2026-11
-    Automated pre-commit SQLFluff linting        :2026-10, 2026-11
+    GitHub Actions CI with duckdb-wasm test runs :active, 2026-10-01, 2026-11-01
+    Automated pre-commit SQLFluff linting        :2026-10-15, 2026-11-15
     section Pipeline Enhancements
-    Incremental modeling (is_incremental)       :2026-11, 2026-12
-    State seed expansion for military APO codes :2026-11, 2026-12
+    Incremental modeling (is_incremental)       :2026-11-01, 2026-12-15
+    State seed expansion for military APO codes :2026-11-15, 2026-12-31
     section Cloud & Delivery
-    MotherDuck cloud deployment                 :2026-12, 2027-01
-    Evidence.dev interactive web dashboard      :2027-01, 2027-02
+    MotherDuck cloud deployment                 :2026-12-01, 2027-01-15
+    Evidence.dev interactive web dashboard      :2027-01-01, 2027-02-28
 ```
 
 - **Near-Term (Quality & CI/CD)**:
